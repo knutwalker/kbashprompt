@@ -1,0 +1,25 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "kbashprompt"
+version = "0.1.0"
+authors = ["Paul Horn <ǝp ʇop ɹǝʞlɐʍʇnuʞ ʇɐ ɹǝdolǝʌǝp>"]
+description = "Produce a PS1 prompt for bash"
+edition = "2018"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+chrono = "0.4.11"
+colorful = "0.2.1"
+git2 = { version = "0.13.6", default-features = false }
+home = "0.5.3"
+
+[profile.release]
+opt-level = 'z'
+debug = false
+debug-assertions = false
+overflow-checks = false
+lto = true
+panic = 'abort'
+codegen-units = 1
+rpath = false
