@@ -13,10 +13,13 @@ use std::{
 
 const _WHITE: Color = Color::White; // 15
 const BLUE: Color = Color::DodgerBlue1; // 33
-const PURPLE: Color = Color::SlateBlue3a; // 61
+const CYAN: Color = Color::LightSeaGreen; // 37
+const VIOLET: Color = Color::SlateBlue3a; // 61
 const GREEN: Color = Color::Chartreuse4; // 64
 const RED: Color = Color::Red3a; // 124
+const PURPLE: Color = Color::DeepPink4c; // 125
 const YELLOW: Color = Color::DarkGoldenrod; // 136
+const ORANGE: Color = Color::DarkOrange3b; // 166
 
 fn main() {
     let stdout = stdout();
@@ -97,7 +100,7 @@ fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<
         head = head.resolve().ok()?;
     }
     let name = head.shorthand()?;
-    Some(write!(f, " {} {}", '\u{e725}', name.color(PURPLE)))
+    Some(write!(f, " {}", name.color(VIOLET)))
 }
 
 fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -105,8 +108,8 @@ fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt
     describe_opts.describe_all().max_candidates_tags(0);
     let describe = repo.describe(&describe_opts).and_then(|d| d.format(None));
     match describe {
-        Ok(s) => write!(f, "{}", s.color(PURPLE)),
-        Err(_) => write!(f, "{}", "(unknown)".color(PURPLE)),
+        Ok(s) => write!(f, "{}", s.color(VIOLET)),
+        Err(_) => write!(f, "{}", "(unknown)".color(VIOLET)),
     }
 }
 
@@ -122,7 +125,7 @@ fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Rebase | RebaseInteractive | RebaseMerge => "rebase",
         ApplyMailbox | ApplyMailboxOrRebase => "am",
     };
-    write!(f, " {}", state.color(RED))
+    write!(f, " {}", state.color(PURPLE))
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

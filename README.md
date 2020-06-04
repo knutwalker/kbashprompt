@@ -35,4 +35,3 @@ export PS2=$(kbashprompt 2);
 ## Dependencies
 
 - Requires a terminal with 256 color support (sends `^[[38;5;{ccc}m` ANSI color codes)
-- Uses Glyphs from https://github.com/ryanoasis/nerd-fonts
