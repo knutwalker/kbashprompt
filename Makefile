@@ -35,8 +35,7 @@ all: $(target)/release/$(APP)
 build: $(target)/release/$(APP)
 
 # install release build to local cargo bin directory
-install: $(target)/release/$(APP)
-> install -m755 -- $(target)/release/$(APP) "$(DESTDIR)$(PREFIX)/bin/"
+install: $(DESTDIR)$(PREFIX)/bin/$(APP)
 
 # clean build output
 clean:
@@ -50,8 +49,11 @@ uninstall:
 
 ### build targets
 
-$(target)/debug/$(APP): Cargo.toml $(shell find src -type f)
+$(target)/debug/$(APP): Cargo.toml Cargo.lock $(shell find src -type f)
 > cargo build --bin $(APP)
 
-$(target)/release/$(APP): Cargo.toml $(shell find src -type f)
+$(target)/release/$(APP): Cargo.toml Cargo.lock $(shell find src -type f)
 > RUSTFLAGS="-C link-arg=-s -C opt-level=z -C target-cpu=native --emit=asm" cargo build --bin $(APP) --release
+
+$(DESTDIR)$(PREFIX)/bin/$(APP): $(target)/release/$(APP)
+> install -m755 -- $(target)/release/$(APP) "$(DESTDIR)$(PREFIX)/bin/"
