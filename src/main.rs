@@ -3,10 +3,12 @@ use colorful::{Color, Colorful, Style};
 use git2::{DescribeOptions, ReferenceType, Repository};
 use home::home_dir;
 use std::{
-    collections::HashSet,
     env::{self, args},
     fmt::{self, Display},
     io::{stdout, Write},
+    ops::{BitAnd, BitOrAssign},
+    path::{Path, PathBuf},
+    process::Command,
 };
 
 const _WHITE: Color = Color::White; // 15
@@ -123,38 +125,78 @@ fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, " {}", state.color(RED))
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[repr(u8)]
+enum GitStatus {
+    Added = 1,
+    Deleted = 2,
+    Modified = 4,
+    New = 8,
+    Conflict = 16,
+}
+
+impl BitOrAssign<GitStatus> for u8 {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: GitStatus) {
+        *self |= rhs as u8;
+    }
+}
+
+impl BitAnd<GitStatus> for u8 {
+    type Output = bool;
+
+    #[inline]
+    fn bitand(self, rhs: GitStatus) -> Self::Output {
+        (self & rhs as u8) == (rhs as u8)
+    }
+}
+
 fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
     use git2::Delta::*;
 
-    let changes = repo
-        .statuses(None)
-        .ok()?
-        .iter()
-        .filter_map(|s| s.index_to_workdir())
-        .filter_map(|s| match s.status() {
-            Added => Some('+'),
-            Deleted => Some('-'),
-            Modified | Renamed | Typechange => Some('*'),
-            Untracked => Some('?'),
-            Conflicted => Some('!'),
-            Unmodified | Copied | Ignored | Unreadable => None,
-        })
-        .fold(HashSet::<char>::new(), |mut acc, s| {
-            acc.insert(s);
-            acc
-        })
-        .into_iter()
-        .collect::<String>();
+    let mut changes = 0;
+    for state in repo.statuses(None).ok()?.iter() {
+        if let Some(state) = state.index_to_workdir() {
+            match state.status() {
+                Added => changes |= GitStatus::Added,
+                Deleted => changes |= GitStatus::Deleted,
+                Modified | Renamed | Typechange => changes |= GitStatus::Modified,
+                Untracked => changes |= GitStatus::New,
+                Conflicted => changes |= GitStatus::Conflict,
+                Unmodified | Copied | Ignored | Unreadable => {}
+            }
+        }
+    }
 
-    if changes.is_empty() {
+    if changes == 0 {
         return None;
     }
 
-    Some(write!(
-        f,
-        " {}{}{}",
-        "[".color(BLUE),
-        changes.color(BLUE),
-        "]".color(BLUE)
-    ))
+    let mut buf = String::with_capacity(changes.count_ones() as usize + 2);
+
+    buf.push('[');
+    if changes & GitStatus::Conflict {
+        buf.push('!');
+    }
+    if changes & GitStatus::New {
+        buf.push('?');
+    }
+    if changes & GitStatus::Added {
+        buf.push('A');
+    }
+    if changes & GitStatus::Deleted {
+        buf.push('D');
+    }
+    if changes & GitStatus::Modified {
+        buf.push('M');
+    }
+    buf.push(']');
+
+    let color = if changes & GitStatus::Conflict {
+        RED
+    } else {
+        BLUE
+    };
+
+    Some(write!(f, " {}", buf.color(color)))
 }
