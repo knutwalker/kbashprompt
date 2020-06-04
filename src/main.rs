@@ -1,5 +1,5 @@
 use chrono::Local;
-use colorful::{Color, Colorful};
+use colorful::{Color, Colorful, Style};
 use git2::{DescribeOptions, ReferenceType, Repository};
 use home::home_dir;
 use std::{
@@ -9,6 +9,7 @@ use std::{
     io::{stdout, Write},
 };
 
+const _WHITE: Color = Color::White; // 15
 const BLUE: Color = Color::DodgerBlue1; // 33
 const PURPLE: Color = Color::SlateBlue3a; // 61
 const GREEN: Color = Color::Chartreuse4; // 64
@@ -46,7 +47,14 @@ impl Display for Ps2 {
 }
 
 fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "{}", Local::now().format("%Y-%m-%d %H:%M:%S"))
+    write!(
+        f,
+        "{}",
+        Local::now()
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string()
+            .style(Style::Dim)
+    )
 }
 
 fn current_dir(f: &mut fmt::Formatter<'_>) -> fmt::Result {
