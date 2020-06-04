@@ -104,9 +104,9 @@ checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.12.6+1.0.0"
+version = "0.12.7+1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf81b43f9b45ab07897a780c9b7b26b1504497e469c7a78162fc29e3b8b1c1b3"
+checksum = "bcd07968649bcb7b9351ecfde53ca4d27673cccfdf57c84255ec18710f3153e0"
 dependencies = [
  "cc",
  "libc",
@@ -219,9 +219,9 @@ dependencies = [
 
 [[package]]
 name = "vcpkg"
-version = "0.2.8"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fc439f2794e98976c88a2a2dafce96b930fe8010b0a256b3c2199a773933168"
+checksum = "55d1e41d56121e07f1e223db0a4def204e45c85425f6a16d462fd07c8d10d74c"
 
 [[package]]
 name = "winapi"
