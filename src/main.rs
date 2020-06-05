@@ -1,6 +1,6 @@
 use chrono::Local;
 use colorful::{Color, Colorful, Style};
-use git2::{DescribeOptions, ReferenceType, Repository};
+use git2::{DescribeOptions, DiffDelta, ReferenceType, Repository, StatusOptions};
 use home::home_dir;
 use std::{
     env::{self, args},
@@ -156,20 +156,18 @@ impl BitAnd<GitStatus> for u8 {
 }
 
 fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-    use git2::Delta::*;
+    let mut status_options = StatusOptions::new();
+    let status_options = status_options
+        .include_untracked(true)
+        .include_ignored(false)
+        .include_unmodified(false)
+        .include_unreadable(false);
 
     let mut changes = 0;
-    for state in repo.statuses(None).ok()?.iter() {
-        if let Some(state) = state.index_to_workdir() {
-            match state.status() {
-                Added => changes |= GitStatus::Added,
-                Deleted => changes |= GitStatus::Deleted,
-                Modified | Renamed | Typechange => changes |= GitStatus::Modified,
-                Untracked => changes |= GitStatus::New,
-                Conflicted => changes |= GitStatus::Conflict,
-                Unmodified | Copied | Ignored | Unreadable => {}
-            }
-        }
+
+    for state in repo.statuses(Some(status_options)).ok()?.iter() {
+        file_change(state.index_to_workdir(), &mut changes);
+        file_change(state.head_to_index(), &mut changes);
     }
 
     if changes == 0 {
@@ -182,9 +180,6 @@ fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Re
     if changes & GitStatus::Conflict {
         buf.push('!');
     }
-    if changes & GitStatus::New {
-        buf.push('?');
-    }
     if changes & GitStatus::Added {
         buf.push('A');
     }
@@ -193,6 +188,9 @@ fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Re
     }
     if changes & GitStatus::Modified {
         buf.push('M');
+    }
+    if changes & GitStatus::New {
+        buf.push('?');
     }
     buf.push(']');
 
@@ -203,6 +201,21 @@ fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Re
     };
 
     Some(write!(f, " {}", buf.color(color)))
+}
+
+fn file_change(state: Option<DiffDelta>, flag: &mut u8) {
+    use git2::Delta::*;
+
+    if let Some(state) = state {
+        match state.status() {
+            Added => *flag |= GitStatus::Added,
+            Deleted => *flag |= GitStatus::Deleted,
+            Modified | Renamed | Typechange => *flag |= GitStatus::Modified,
+            Untracked => *flag |= GitStatus::New,
+            Conflicted => *flag |= GitStatus::Conflict,
+            Unmodified | Copied | Ignored | Unreadable => {}
+        }
+    }
 }
 
 fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
