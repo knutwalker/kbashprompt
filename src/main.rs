@@ -56,7 +56,7 @@ fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f,
         "{}",
         Local::now()
-            .format("%Y-%m-%d %H:%M:%S")
+            .format("%H:%M:%S")
             .to_string()
             .style(Style::Dim)
     )
