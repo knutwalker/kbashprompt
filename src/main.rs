@@ -90,18 +90,54 @@ fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
+#[cfg(debug_assertions)]
+macro_rules! unwrap {
+    ($e:expr) => {
+        match $e {
+            Ok(thing) => thing,
+            Err(e) => {
+                eprintln!(
+                    "[{}:{}] !! {} !! = {:#?}",
+                    file!(),
+                    line!(),
+                    stringify!($e),
+                    e
+                );
+                return None;
+            }
+        };
+    };
+}
+
+#[cfg(not(debug_assertions))]
+macro_rules! unwrap {
+    ($e:expr) => {
+        match $e {
+            Ok(thing) => thing,
+            Err(_) => return None,
+        };
+    };
+}
+
 fn branch_name(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     branch_name_by_head(repo, f).unwrap_or_else(|| branch_name_by_describe(repo, f))
 }
 
 fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-    let mut head = repo.head().ok()?;
+    let mut head = unwrap!(repo.head());
     let kind = head.kind()?;
     if kind == ReferenceType::Symbolic {
-        head = head.resolve().ok()?;
+        head = unwrap!(head.resolve());
     }
-    let name = head.shorthand()?;
-    Some(write!(f, " {}", name.color(VIOLET)))
+    let write_result = if head.is_branch() {
+        let head = head.shorthand()?;
+        write!(f, " {}", head.color(VIOLET))
+    } else {
+        let id = head.target()?;
+        let id = format!("{}", id);
+        write!(f, " {}", id[..=9].color(PURPLE))
+    };
+    Some(write_result)
 }
 
 fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
