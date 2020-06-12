@@ -15,7 +15,7 @@ git2 = { version = "0.13.6", default-features = false }
 home = "0.5.3"
 
 [profile.release]
-opt-level = 'z'
+opt-level = 3
 debug = false
 debug-assertions = false
 overflow-checks = false

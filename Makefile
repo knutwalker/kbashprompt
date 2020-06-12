@@ -53,7 +53,7 @@ $(target)/debug/$(APP): Cargo.toml Cargo.lock $(shell find src -type f)
 > cargo build --bin $(APP)
 
 $(target)/release/$(APP): Cargo.toml Cargo.lock $(shell find src -type f)
-> RUSTFLAGS="-C link-arg=-s -C opt-level=z -C target-cpu=native --emit=asm" cargo build --bin $(APP) --release
+> RUSTFLAGS="-C link-arg=-s -C opt-level=3 -C target-cpu=native --emit=asm" cargo build --bin $(APP) --release
 
 $(DESTDIR)$(PREFIX)/bin/$(APP): $(target)/release/$(APP)
 > install -m755 -- $(target)/release/$(APP) "$(DESTDIR)$(PREFIX)/bin/"

@@ -1,6 +1,6 @@
 use chrono::Local;
 use colorful::{Color, Colorful, Style};
-use git2::{DescribeOptions, DiffDelta, ReferenceType, Repository, StatusOptions};
+use git2::{DescribeOptions, ReferenceType, Repository, StatusOptions, StatusShow};
 use home::home_dir;
 use std::{
     env::{self, args},
@@ -38,7 +38,7 @@ impl Display for Ps1 {
         current_time(f)?;
         current_dir(f)?;
         git_prompt(f)?;
-        writeln!(f, "")?;
+        writeln!(f)?;
         write!(f, "∵ ")
     }
 }
@@ -132,11 +132,10 @@ fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 #[repr(u8)]
 enum GitStatus {
-    Added = 1,
+    New = 1,
     Deleted = 2,
     Modified = 4,
-    New = 8,
-    Conflict = 16,
+    Conflict = 8,
 }
 
 impl BitOrAssign<GitStatus> for u8 {
@@ -158,16 +157,27 @@ impl BitAnd<GitStatus> for u8 {
 fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
     let mut status_options = StatusOptions::new();
     let status_options = status_options
+        .show(StatusShow::Workdir)
+        .update_index(false)
+        .no_refresh(true)
+        .exclude_submodules(true)
         .include_untracked(true)
-        .include_ignored(false)
-        .include_unmodified(false)
-        .include_unreadable(false);
+        .recurse_untracked_dirs(false);
 
     let mut changes = 0;
+    let states = unwrap!(repo.statuses(Some(status_options)));
+    for state in states.iter() {
+        let status = state.status();
 
-    for state in repo.statuses(Some(status_options)).ok()?.iter() {
-        file_change(state.index_to_workdir(), &mut changes);
-        file_change(state.head_to_index(), &mut changes);
+        if status.is_conflicted() {
+            changes |= GitStatus::Conflict
+        } else if status.is_wt_new() {
+            changes |= GitStatus::New
+        } else if status.is_wt_modified() || status.is_wt_renamed() || status.is_wt_typechange() {
+            changes |= GitStatus::Modified
+        } else if status.is_wt_deleted() {
+            changes |= GitStatus::Deleted
+        }
     }
 
     if changes == 0 {
@@ -180,18 +190,16 @@ fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Re
     if changes & GitStatus::Conflict {
         buf.push('!');
     }
-    if changes & GitStatus::Added {
-        buf.push('A');
-    }
-    if changes & GitStatus::Deleted {
-        buf.push('D');
-    }
-    if changes & GitStatus::Modified {
-        buf.push('M');
-    }
     if changes & GitStatus::New {
         buf.push('?');
     }
+    if changes & GitStatus::Deleted {
+        buf.push('-');
+    }
+    if changes & GitStatus::Modified {
+        buf.push('*');
+    }
+
     buf.push(']');
 
     let color = if changes & GitStatus::Conflict {
@@ -201,21 +209,6 @@ fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Re
     };
 
     Some(write!(f, " {}", buf.color(color)))
-}
-
-fn file_change(state: Option<DiffDelta>, flag: &mut u8) {
-    use git2::Delta::*;
-
-    if let Some(state) = state {
-        match state.status() {
-            Added => *flag |= GitStatus::Added,
-            Deleted => *flag |= GitStatus::Deleted,
-            Modified | Renamed | Typechange => *flag |= GitStatus::Modified,
-            Untracked => *flag |= GitStatus::New,
-            Conflicted => *flag |= GitStatus::Conflict,
-            Unmodified | Copied | Ignored | Unreadable => {}
-        }
-    }
 }
 
 fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
@@ -237,12 +230,12 @@ fn rust_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt:
         return None;
     }
 
-    let rustc_version = Command::new("rustc").arg("--version").output().ok()?;
+    let rustc_version = unwrap!(Command::new("rustc").arg("--version").output());
     if !rustc_version.status.success() {
         return None;
     }
 
-    let rustc_version = String::from_utf8(rustc_version.stdout).ok()?;
+    let rustc_version = unwrap!(String::from_utf8(rustc_version.stdout));
     let rustc_version = rustc_version.split_whitespace().nth(1)?;
 
     Some(write!(f, " 🦀 {}", rustc_version.color(ORANGE)))
