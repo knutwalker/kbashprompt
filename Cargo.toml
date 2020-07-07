@@ -12,6 +12,7 @@ license = "MIT OR Apache-2.0"
 chrono = "0.4.11"
 colorful = "0.2.1"
 git2 = { version = "0.13.6", default-features = false }
+macsmc = "0.1.7"
 home = "0.5.3"
 
 [profile.release]

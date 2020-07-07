@@ -94,6 +94,7 @@ dependencies = [
  "colorful",
  "git2",
  "home",
+ "macsmc",
 ]
 
 [[package]]
@@ -133,6 +134,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "macsmc"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1d7bca58ae48ddde869cb540e95108ee0bcfe2e441635f3e12646d920e3d4cb"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

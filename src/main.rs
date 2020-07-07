@@ -2,9 +2,10 @@ use chrono::Local;
 use colorful::{Color, Colorful, Style};
 use git2::{DescribeOptions, ReferenceType, Repository, StatusOptions, StatusShow};
 use home::home_dir;
+use macsmc::Smc;
 use std::{
     env::{self, args},
-    fmt::{self, Display},
+    fmt::{self, Display, Write as FmtWrite},
     io::{stdout, Write},
     ops::{BitAnd, BitOrAssign},
     path::{Path, PathBuf},
@@ -36,6 +37,7 @@ struct Ps1;
 impl Display for Ps1 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         current_time(f)?;
+        battery_info(f).unwrap_or_else(|| Ok(()))?;
         current_dir(f)?;
         git_prompt(f)?;
         writeln!(f)?;
@@ -49,45 +51,6 @@ impl Display for Ps2 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", "→ ".color(YELLOW))
     }
-}
-
-fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-        f,
-        "{}",
-        Local::now()
-            .format("%H:%M:%S")
-            .to_string()
-            .style(Style::Dim)
-    )
-}
-
-fn current_dir(f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    if let Ok(pwd) = env::current_dir() {
-        if let Some(home) = home_dir() {
-            if let Ok(pwd) = pwd.strip_prefix(home) {
-                let pwd = pwd.to_string_lossy();
-                if pwd.is_empty() {
-                    write!(f, " {}", "~".color(GREEN))?;
-                } else {
-                    write!(f, " {}{}", "~/".color(GREEN), pwd.color(GREEN))?;
-                }
-                return Ok(());
-            }
-        }
-        write!(f, " {}", pwd.to_string_lossy().color(GREEN))?
-    }
-    Ok(())
-}
-
-fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    if let Ok(repo) = Repository::open_from_env() {
-        repo_type(&repo, f).unwrap_or(Ok(()))?;
-        branch_name(&repo, f)?;
-        repo_changes(&repo, f).unwrap_or(Ok(()))?;
-        repo_state(&repo, f)?;
-    }
-    Ok(())
 }
 
 #[cfg(debug_assertions)]
@@ -117,6 +80,97 @@ macro_rules! unwrap {
             Err(_) => return None,
         };
     };
+}
+
+fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(
+        f,
+        "{}",
+        Local::now()
+            .format("%H:%M:%S")
+            .to_string()
+            .style(Style::Dim)
+    )
+}
+
+fn battery_info(f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+    let mut smc = unwrap!(Smc::connect());
+    let battery_info = unwrap!(smc.battery_info());
+
+    let (charging, battery_icon) = match (
+        battery_info.health_ok,
+        battery_info.ac_present,
+        battery_info.charging,
+        battery_info.battery_powered,
+    ) {
+        (false, ..) => return Some(write!(f, " 💥")),
+        (_, true, true, _) => (true, "⚡️"),
+        (_, false, _, true) => (false, "🔋"),
+        _ => return None,
+    };
+
+    const BATTERY_PRECISION: f32 = 5.0;
+
+    for battery in unwrap!(smc.battery_details()) {
+        let battery = unwrap!(battery);
+        let battery_charge =
+            ((battery.percentage() / BATTERY_PRECISION).ceil() * BATTERY_PRECISION) as u8;
+        if battery_charge < 100 {
+            let mut info = format!("{}%", battery_charge);
+
+            let time = if charging {
+                battery.time_until_full()
+            } else {
+                battery.time_remaining()
+            };
+
+            if let Some(time) = time {
+                let secs = time.as_secs();
+                let hours = secs / 3600;
+                let mins = (secs % 3600) / 60;
+                let secs = secs % 60;
+                if hours > 0 {
+                    write!(info, " {}h", hours).unwrap();
+                }
+                write!(info, " {:02}m {:02}s", mins, secs).unwrap();
+            }
+
+            match write!(f, " {} {}", battery_icon, info.style(Style::Dim)) {
+                Err(e) => return Some(Err(e)),
+                Ok(_) => (),
+            }
+        }
+    }
+
+    Some(Ok(()))
+}
+
+fn current_dir(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    if let Ok(pwd) = env::current_dir() {
+        if let Some(home) = home_dir() {
+            if let Ok(pwd) = pwd.strip_prefix(home) {
+                let pwd = pwd.to_string_lossy();
+                if pwd.is_empty() {
+                    write!(f, " {}", "~".color(GREEN))?;
+                } else {
+                    write!(f, " {}{}", "~/".color(GREEN), pwd.color(GREEN))?;
+                }
+                return Ok(());
+            }
+        }
+        write!(f, " {}", pwd.to_string_lossy().color(GREEN))?
+    }
+    Ok(())
+}
+
+fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    if let Ok(repo) = Repository::open_from_env() {
+        repo_type(&repo, f).unwrap_or(Ok(()))?;
+        branch_name(&repo, f)?;
+        repo_changes(&repo, f).unwrap_or(Ok(()))?;
+        repo_state(&repo, f)?;
+    }
+    Ok(())
 }
 
 fn branch_name(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
