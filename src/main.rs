@@ -109,7 +109,7 @@ fn battery_info(f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
         _ => return None,
     };
 
-    const BATTERY_PRECISION: f32 = 5.0;
+    const BATTERY_PRECISION: f32 = 1.0;
 
     for battery in unwrap!(smc.battery_details()) {
         let battery = unwrap!(battery);
