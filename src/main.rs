@@ -171,52 +171,6 @@ fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
-fn branch_name(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    branch_name_by_head(repo, f).unwrap_or_else(|| branch_name_by_describe(repo, f))
-}
-
-fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-    let mut head = unwrap!(repo.head());
-    let kind = head.kind()?;
-    if kind == ReferenceType::Symbolic {
-        head = unwrap!(head.resolve());
-    }
-    let write_result = if head.is_branch() {
-        let head = head.shorthand()?;
-        write!(f, " {}", head.color(VIOLET))
-    } else {
-        let id = head.target()?;
-        let id = format!("{}", id);
-        write!(f, " {}", id[..=9].color(PURPLE))
-    };
-    Some(write_result)
-}
-
-fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    let mut describe_opts = DescribeOptions::default();
-    describe_opts.describe_all().max_candidates_tags(0);
-    let describe = repo.describe(&describe_opts).and_then(|d| d.format(None));
-    match describe {
-        Ok(s) => write!(f, "{}", s.color(VIOLET)),
-        Err(_) => write!(f, "{}", "(unknown)".color(VIOLET)),
-    }
-}
-
-fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    use git2::RepositoryState::*;
-
-    let state = match repo.state() {
-        Clean => return Ok(()),
-        Merge => "merge",
-        Revert | RevertSequence => "revert",
-        CherryPick | CherryPickSequence => "cherry-pick",
-        Bisect => "bisect",
-        Rebase | RebaseInteractive | RebaseMerge => "rebase",
-        ApplyMailbox | ApplyMailboxOrRebase => "am",
-    };
-    write!(f, " {}", state.color(PURPLE))
-}
-
 fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
     let wd = repo.workdir()?;
     if let Some(Err(e)) = rust_version(wd, f) {
@@ -275,4 +229,50 @@ fn java_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt:
     }
 
     None
+}
+
+fn branch_name(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    branch_name_by_head(repo, f).unwrap_or_else(|| branch_name_by_describe(repo, f))
+}
+
+fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+    let mut head = unwrap!(repo.head());
+    let kind = head.kind()?;
+    if kind == ReferenceType::Symbolic {
+        head = unwrap!(head.resolve());
+    }
+    let write_result = if head.is_branch() {
+        let head = head.shorthand()?;
+        write!(f, " {}", head.color(VIOLET))
+    } else {
+        let id = head.target()?;
+        let id = format!("{}", id);
+        write!(f, " {}", id[..=9].color(PURPLE))
+    };
+    Some(write_result)
+}
+
+fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    let mut describe_opts = DescribeOptions::default();
+    describe_opts.describe_all().max_candidates_tags(0);
+    let describe = repo.describe(&describe_opts).and_then(|d| d.format(None));
+    match describe {
+        Ok(s) => write!(f, "{}", s.color(VIOLET)),
+        Err(_) => write!(f, "{}", "(unknown)".color(VIOLET)),
+    }
+}
+
+fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    use git2::RepositoryState::*;
+
+    let state = match repo.state() {
+        Clean => return Ok(()),
+        Merge => "merge",
+        Revert | RevertSequence => "revert",
+        CherryPick | CherryPickSequence => "cherry-pick",
+        Bisect => "bisect",
+        Rebase | RebaseInteractive | RebaseMerge => "rebase",
+        ApplyMailbox | ApplyMailboxOrRebase => "am",
+    };
+    write!(f, " {}", state.color(PURPLE))
 }
