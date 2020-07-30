@@ -34,7 +34,7 @@ fn main() {
 struct Ps1;
 
 impl Display for Ps1 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         current_time(f)?;
         battery_info(f).unwrap_or_else(|| Ok(()))?;
         current_dir(f)?;
@@ -47,7 +47,7 @@ impl Display for Ps1 {
 struct Ps2;
 
 impl Display for Ps2 {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", "→ ".color(YELLOW))
     }
 }
@@ -81,7 +81,7 @@ macro_rules! unwrap {
     };
 }
 
-fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn current_time(f: &mut fmt::Formatter) -> fmt::Result {
     write!(
         f,
         "{}",
@@ -92,7 +92,7 @@ fn current_time(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     )
 }
 
-fn battery_info(f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+fn battery_info(f: &mut fmt::Formatter) -> Option<fmt::Result> {
     let mut smc = unwrap!(Smc::connect());
     let battery_info = unwrap!(smc.battery_info());
 
@@ -144,7 +144,7 @@ fn battery_info(f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
     Some(Ok(()))
 }
 
-fn current_dir(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn current_dir(f: &mut fmt::Formatter) -> fmt::Result {
     if let Ok(pwd) = env::current_dir() {
         if let Some(home) = home_dir() {
             if let Ok(pwd) = pwd.strip_prefix(home) {
@@ -162,7 +162,7 @@ fn current_dir(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
-fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn git_prompt(f: &mut fmt::Formatter) -> fmt::Result {
     if let Ok(repo) = Repository::open_from_env() {
         repo_type(&repo, f).unwrap_or(Ok(()))?;
         branch_name(&repo, f)?;
@@ -171,7 +171,7 @@ fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     Ok(())
 }
 
-fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+fn repo_type(repo: &Repository, f: &mut fmt::Formatter) -> Option<fmt::Result> {
     let wd = repo.workdir()?;
     if let Some(Err(e)) = rust_version(wd, f) {
         return Some(Err(e));
@@ -183,7 +183,7 @@ fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Resul
     Some(Ok(()))
 }
 
-fn rust_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+fn rust_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter) -> Option<fmt::Result> {
     let cargo_toml = wd.as_ref().join("Cargo.toml");
     let cargo_toml = cargo_toml.metadata().ok()?;
     if !cargo_toml.is_file() {
@@ -201,7 +201,7 @@ fn rust_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt:
     Some(write!(f, " 🦀 {}", rustc_version.color(ORANGE)))
 }
 
-fn java_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+fn java_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter) -> Option<fmt::Result> {
     let has_file = move |file: &str| -> bool {
         let build_file = wd.as_ref().join(file);
         build_file.metadata().ok().filter(|f| f.is_file()).is_some()
@@ -231,11 +231,11 @@ fn java_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt:
     None
 }
 
-fn branch_name(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn branch_name(repo: &Repository, f: &mut fmt::Formatter) -> fmt::Result {
     branch_name_by_head(repo, f).unwrap_or_else(|| branch_name_by_describe(repo, f))
 }
 
-fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
+fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter) -> Option<fmt::Result> {
     let mut head = unwrap!(repo.head());
     let kind = head.kind()?;
     if kind == ReferenceType::Symbolic {
@@ -252,7 +252,7 @@ fn branch_name_by_head(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<
     Some(write_result)
 }
 
-fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter) -> fmt::Result {
     let mut describe_opts = DescribeOptions::default();
     describe_opts.describe_all().max_candidates_tags(0);
     let describe = repo.describe(&describe_opts).and_then(|d| d.format(None));
@@ -262,7 +262,7 @@ fn branch_name_by_describe(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt
     }
 }
 
-fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+fn repo_state(repo: &Repository, f: &mut fmt::Formatter) -> fmt::Result {
     use git2::RepositoryState::*;
 
     let state = match repo.state() {
