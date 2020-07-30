@@ -1,23 +1,22 @@
 use chrono::Local;
 use colorful::{Color, Colorful, Style};
-use git2::{DescribeOptions, ReferenceType, Repository, StatusOptions, StatusShow};
+use git2::{DescribeOptions, ReferenceType, Repository};
 use home::home_dir;
 use macsmc::Smc;
 use std::{
     env::{self, args},
     fmt::{self, Display, Write as FmtWrite},
     io::{stdout, Write},
-    ops::{BitAnd, BitOrAssign},
     path::{Path, PathBuf},
     process::Command,
 };
 
 const _WHITE: Color = Color::White; // 15
-const BLUE: Color = Color::DodgerBlue1; // 33
+const _BLUE: Color = Color::DodgerBlue1; // 33
 const CYAN: Color = Color::LightSeaGreen; // 37
 const VIOLET: Color = Color::SlateBlue3a; // 61
 const GREEN: Color = Color::Chartreuse4; // 64
-const RED: Color = Color::Red3a; // 124
+const _RED: Color = Color::Red3a; // 124
 const PURPLE: Color = Color::DeepPink4c; // 125
 const YELLOW: Color = Color::DarkGoldenrod; // 136
 const ORANGE: Color = Color::DarkOrange3b; // 166
@@ -167,7 +166,6 @@ fn git_prompt(f: &mut fmt::Formatter<'_>) -> fmt::Result {
     if let Ok(repo) = Repository::open_from_env() {
         repo_type(&repo, f).unwrap_or(Ok(()))?;
         branch_name(&repo, f)?;
-        repo_changes(&repo, f).unwrap_or(Ok(()))?;
         repo_state(&repo, f)?;
     }
     Ok(())
@@ -219,88 +217,6 @@ fn repo_state(repo: &Repository, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(f, " {}", state.color(PURPLE))
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-#[repr(u8)]
-enum GitStatus {
-    New = 1,
-    Deleted = 2,
-    Modified = 4,
-    Conflict = 8,
-}
-
-impl BitOrAssign<GitStatus> for u8 {
-    #[inline]
-    fn bitor_assign(&mut self, rhs: GitStatus) {
-        *self |= rhs as u8;
-    }
-}
-
-impl BitAnd<GitStatus> for u8 {
-    type Output = bool;
-
-    #[inline]
-    fn bitand(self, rhs: GitStatus) -> Self::Output {
-        (self & rhs as u8) == (rhs as u8)
-    }
-}
-
-fn repo_changes(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-    let mut status_options = StatusOptions::new();
-    let status_options = status_options
-        .show(StatusShow::Workdir)
-        .update_index(false)
-        .no_refresh(true)
-        .exclude_submodules(true)
-        .include_untracked(true)
-        .recurse_untracked_dirs(false);
-
-    let mut changes = 0;
-    let states = unwrap!(repo.statuses(Some(status_options)));
-    for state in states.iter() {
-        let status = state.status();
-
-        if status.is_conflicted() {
-            changes |= GitStatus::Conflict
-        } else if status.is_wt_new() {
-            changes |= GitStatus::New
-        } else if status.is_wt_modified() || status.is_wt_renamed() || status.is_wt_typechange() {
-            changes |= GitStatus::Modified
-        } else if status.is_wt_deleted() {
-            changes |= GitStatus::Deleted
-        }
-    }
-
-    if changes == 0 {
-        return None;
-    }
-
-    let mut buf = String::with_capacity(changes.count_ones() as usize + 2);
-
-    buf.push('[');
-    if changes & GitStatus::Conflict {
-        buf.push('!');
-    }
-    if changes & GitStatus::New {
-        buf.push('?');
-    }
-    if changes & GitStatus::Deleted {
-        buf.push('-');
-    }
-    if changes & GitStatus::Modified {
-        buf.push('*');
-    }
-
-    buf.push(']');
-
-    let color = if changes & GitStatus::Conflict {
-        RED
-    } else {
-        BLUE
-    };
-
-    Some(write!(f, " {}", buf.color(color)))
-}
-
 fn repo_type(repo: &Repository, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
     let wd = repo.workdir()?;
     if let Some(Err(e)) = rust_version(wd, f) {
@@ -332,25 +248,22 @@ fn rust_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt:
 }
 
 fn java_version(wd: impl AsRef<Path>, f: &mut fmt::Formatter<'_>) -> Option<fmt::Result> {
-    let has_file = move |file: &str| -> Option<()> {
+    let has_file = move |file: &str| -> bool {
         let build_file = wd.as_ref().join(file);
-        build_file
-            .metadata()
-            .ok()
-            .filter(|f| f.is_file())
-            .map(|_| ())
+        build_file.metadata().ok().filter(|f| f.is_file()).is_some()
     };
 
     for file in [
         "build.gradle",
-        "build.sbt",
         "pom.xml",
         "build.gradle.kts",
+        "build.sbt",
         "build.xml",
+        ".java-version",
     ]
     .iter()
     {
-        if has_file(file).is_some() {
+        if has_file(file) {
             let java_home = env::var_os("JAVA_HOME")?;
             let java_home = PathBuf::from(java_home);
             let java_home = java_home.read_link().unwrap_or(java_home);
