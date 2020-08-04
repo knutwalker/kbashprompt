@@ -10,6 +10,7 @@ use std::{
     path::{Path, PathBuf},
     process::Command,
 };
+use sysinfo::{System, SystemExt};
 
 const _WHITE: Color = Color::White; // 15
 const _BLUE: Color = Color::DodgerBlue1; // 33
@@ -28,27 +29,6 @@ fn main() {
         let _ = write!(stdout, "{}", Ps1);
     } else {
         let _ = write!(stdout, "{}", Ps2);
-    }
-}
-
-struct Ps1;
-
-impl Display for Ps1 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        current_time(f)?;
-        battery_info(f).unwrap_or_else(|| Ok(()))?;
-        current_dir(f)?;
-        git_prompt(f)?;
-        writeln!(f)?;
-        write!(f, "∵ ")
-    }
-}
-
-struct Ps2;
-
-impl Display for Ps2 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", "→ ".color(YELLOW))
     }
 }
 
@@ -81,6 +61,60 @@ macro_rules! unwrap {
     };
 }
 
+#[cfg(debug_assertions)]
+macro_rules! map_err {
+    ($e:expr) => {
+        match $e {
+            Ok(thing) => thing,
+            Err(e) => {
+                eprintln!(
+                    "[{}:{}] !! {} !! = {:#?}",
+                    file!(),
+                    line!(),
+                    stringify!($e),
+                    e
+                );
+                return Err(::std::fmt::Error);
+            }
+        };
+    };
+}
+
+#[cfg(not(debug_assertions))]
+macro_rules! map_err {
+    ($e:expr) => {
+        match $e {
+            Ok(thing) => thing,
+            Err(_) => return Err(::std::fmt::Error),
+        };
+    };
+}
+
+struct Ps1;
+
+impl Display for Ps1 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut smc = map_err!(Smc::connect());
+
+        writeln!(f)?;
+        current_time(f)?;
+        battery_info(&mut smc, f)?;
+        current_dir(f)?;
+        git_prompt(f)?;
+        sys_info(&mut smc, f)?;
+        writeln!(f)?;
+        write!(f, "∵ ")
+    }
+}
+
+struct Ps2;
+
+impl Display for Ps2 {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", "→ ".color(YELLOW))
+    }
+}
+
 fn current_time(f: &mut fmt::Formatter) -> fmt::Result {
     write!(
         f,
@@ -92,9 +126,8 @@ fn current_time(f: &mut fmt::Formatter) -> fmt::Result {
     )
 }
 
-fn battery_info(f: &mut fmt::Formatter) -> Option<fmt::Result> {
-    let mut smc = unwrap!(Smc::connect());
-    let battery_info = unwrap!(smc.battery_info());
+fn battery_info(smc: &mut Smc, f: &mut fmt::Formatter) -> fmt::Result {
+    let battery_info = map_err!(smc.battery_info());
 
     let (charging, battery_icon) = match (
         battery_info.health_ok,
@@ -102,16 +135,16 @@ fn battery_info(f: &mut fmt::Formatter) -> Option<fmt::Result> {
         battery_info.charging,
         battery_info.battery_powered,
     ) {
-        (false, ..) => return Some(write!(f, " 💥")),
+        (false, ..) => return write!(f, " 💥"),
         (_, true, true, _) => (true, "⚡️"),
         (_, false, _, true) => (false, "🔋"),
-        _ => return None,
+        _ => return Ok(()),
     };
 
     const BATTERY_PRECISION: f32 = 1.0;
 
-    for battery in unwrap!(smc.battery_details()) {
-        let battery = unwrap!(battery);
+    for battery in map_err!(smc.battery_details()) {
+        let battery = map_err!(battery);
         let battery_charge =
             ((battery.percentage() / BATTERY_PRECISION).ceil() * BATTERY_PRECISION) as u8;
         if battery_charge < 100 {
@@ -134,14 +167,11 @@ fn battery_info(f: &mut fmt::Formatter) -> Option<fmt::Result> {
                 write!(info, " {:02}m {:02}s", mins, secs).unwrap();
             }
 
-            match write!(f, " {} {}", battery_icon, info.style(Style::Dim)) {
-                Err(e) => return Some(Err(e)),
-                Ok(_) => (),
-            }
+            write!(f, " {} {}", battery_icon, info.style(Style::Dim))?
         }
     }
 
-    Some(Ok(()))
+    Ok(())
 }
 
 fn current_dir(f: &mut fmt::Formatter) -> fmt::Result {
@@ -275,4 +305,26 @@ fn repo_state(repo: &Repository, f: &mut fmt::Formatter) -> fmt::Result {
         ApplyMailbox | ApplyMailboxOrRebase => "am",
     };
     write!(f, " {}", state.color(PURPLE))
+}
+
+fn sys_info(smc: &mut Smc, f: &mut fmt::Formatter) -> fmt::Result {
+    let system = System::new();
+    let num_cpus = map_err!(smc.cpu_core_temps()).count() as f64;
+    let load = system.get_load_average().one;
+    let load = {
+        let factor = load / num_cpus;
+        if factor > 4.0 {
+            "😰"
+        } else if factor > 3.0 {
+            "😥"
+        } else if factor > 2.0 {
+            "😓"
+        } else if factor > 1.0 {
+            "😅"
+        } else {
+            ""
+        }
+    };
+
+    write!(f, " {}", load.dim())
 }

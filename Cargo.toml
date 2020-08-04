@@ -11,9 +11,10 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 chrono = "0.4.13"
 colorful = "0.2.1"
-git2 = { version = "0.13.6", default-features = false }
-macsmc = "0.1.7"
+git2 = { version = "0.13.8", default-features = false }
 home = "0.5.3"
+macsmc = "0.1.7"
+sysinfo = "0.15.0"
 
 [profile.release]
 opt-level = 3
