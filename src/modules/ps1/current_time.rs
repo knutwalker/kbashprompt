@@ -1,9 +1,9 @@
 use super::ModuleInfo;
-use chrono::Local;
 use colorful::Style;
+use time::OffsetDateTime;
 
 pub(super) fn info() -> ModuleInfo {
-    ModuleInfo::of()
-        .text(Local::now().format("%H:%M:%S"))
-        .style(Style::Dim)
+    let now = OffsetDateTime::now_local().time();
+    let now = format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second());
+    ModuleInfo::of().info(now).style(Style::Dim)
 }
