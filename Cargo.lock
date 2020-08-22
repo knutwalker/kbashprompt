@@ -8,9 +8,9 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "cc"
-version = "1.0.57"
+version = "1.0.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
+checksum = "66120af515773fb005778dc07c261bd201ec8ce50bd6e7144c927753fe013381"
 dependencies = [
  "jobserver",
 ]
@@ -29,9 +29,9 @@ checksum = "0bca1619ff57dd7a56b58a8e25ef4199f123e78e503fe1653410350a1b98ae65"
 
 [[package]]
 name = "git2"
-version = "0.13.8"
+version = "0.13.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6ac22e49b7d886b6802c66662b12609452248b1bc9e87d6d83ecea3db96f557"
+checksum = "86d97249f21e9542caeee9f8e1d150905cd875bf723f5ff771bdb4852eb83a24"
 dependencies = [
  "bitflags",
  "libc",
@@ -89,9 +89,9 @@ checksum = "755456fae044e6fa1ebbbd1b3e902ae19e73097ed4ed87bb79934a867c007bc3"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.12.9+1.0.1"
+version = "0.12.12+1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b33bf3d9d4c45b48ae1ea7c334be69994624dc0a69f833d5d9f7605f24b552b"
+checksum = "0100ae90655025134424939f1f60e27e879460d451dff6afedde4f8226cbebfc"
 dependencies = [
  "cc",
  "libc",
@@ -101,9 +101,9 @@ dependencies = [
 
 [[package]]
 name = "libz-sys"
-version = "1.0.25"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
+checksum = "af67924b8dd885cccea261866c8ce5b74d239d272e154053ff927dae839f5ae9"
 dependencies = [
  "cc",
  "libc",
@@ -113,9 +113,9 @@ dependencies = [
 
 [[package]]
 name = "log"
-version = "0.4.8"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14b6052be84e6b71ab17edffc2eeabf5c2c3ae1fdb464aae35ac50c67a44e1f7"
+checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if",
 ]
@@ -153,9 +153,9 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pkg-config"
-version = "0.3.17"
+version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05da548ad6865900e60eaba7f589cc0783590a92e940c26953ff81ddbab2d677"
+checksum = "d36492546b6af1463394d46f0c834346f31548646f6ba10849802c9c9a27ac33"
 
 [[package]]
 name = "standback"
@@ -180,9 +180,9 @@ dependencies = [
 
 [[package]]
 name = "tinyvec"
-version = "0.3.3"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53953d2d3a5ad81d9f844a32f14ebb121f50b650cd59d0ee2a07cf13c617efed"
+checksum = "238ce071d267c5710f9d31451efec16c5ee22de34df17cc05e56cbc92e967117"
 
 [[package]]
 name = "unicode-bidi"
