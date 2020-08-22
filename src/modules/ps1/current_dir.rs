@@ -1,29 +1,35 @@
 use super::{ModuleInfo, ModuleOut};
 use colorful::Color;
-use std::{borrow::Cow, env, ffi::OsString};
+use std::{borrow::Cow, env, path::Path};
 
 const GREEN: Color = Color::Chartreuse4; // 64
 
 pub(super) fn info() -> ModuleOut {
-    if let Ok(pwd) = env::current_dir() {
-        if let Some(home) = home() {
-            if let Ok(pwd) = pwd.strip_prefix(home) {
-                let pwd = pwd.to_string_lossy();
-                let pwd = if pwd.is_empty() {
-                    Cow::Borrowed("~")
-                } else {
-                    Cow::Owned(format!("~/{}", pwd))
-                };
-                return Some(ModuleInfo::of().info(pwd).color(GREEN));
-            }
-        }
-        let pwd = pwd.to_string_lossy();
-        let pwd = pwd.into_owned();
-        return Some(ModuleInfo::of().info(pwd).color(GREEN));
+    let pwd = env::current_dir().ok()?;
+    let info = ModuleInfo::of().color(GREEN);
+
+    match home_path(&pwd) {
+        Some(path) => info.info(path),
+        None => info.info(full_path(&pwd)),
     }
-    None
+    .some()
 }
 
-fn home() -> Option<OsString> {
-    env::var_os("HOME").filter(|h| !h.is_empty())
+fn home_path(path: &Path) -> Option<Cow<'static, str>> {
+    let home = env::var_os("HOME")?;
+    if home.is_empty() {
+        return None;
+    }
+    let path = path.strip_prefix(home).ok()?;
+    let path = path.to_string_lossy();
+    Some(if path.is_empty() {
+        "~".into()
+    } else {
+        format!("~/{}", path).into()
+    })
+}
+
+fn full_path(path: &Path) -> String {
+    let pwd = path.to_string_lossy();
+    pwd.into_owned()
 }
