@@ -1,16 +1,14 @@
 use super::{ModuleInfo, ModuleOut};
 use colorful::Color;
 use git2::{DescribeOptions, ReferenceType, Repository};
-use std::{
-    env,
-    path::{Path, PathBuf},
-    process::Command,
-};
 
-const CYAN: Color = Color::LightSeaGreen; // 37
 const VIOLET: Color = Color::SlateBlue3a; // 61
 const PURPLE: Color = Color::DeepPink4c; // 125
-const ORANGE: Color = Color::DarkOrange3b; // 166
+
+#[path = "java_version.rs"]
+mod java_version;
+#[path = "rust_version.rs"]
+mod rust_version;
 
 pub(super) fn try_with_each<E>(mut fun: impl FnMut(ModuleInfo) -> Result<(), E>) -> Result<(), E> {
     if let Ok(repo) = Repository::open_from_env() {
@@ -28,10 +26,10 @@ fn try_with_each_repo_type<E>(
     mut fun: impl FnMut(ModuleInfo) -> Result<(), E>,
 ) -> Result<(), E> {
     if let Some(workdir) = repo.workdir() {
-        if let Some(v) = rust_version(workdir) {
+        if let Some(v) = rust_version::get(workdir) {
             fun(v)?
         }
-        if let Some(v) = java_version(workdir) {
+        if let Some(v) = java_version::get(workdir) {
             fun(v)?
         }
     }
@@ -83,54 +81,4 @@ fn repo_state(repo: &Repository) -> ModuleOut {
         ApplyMailbox | ApplyMailboxOrRebase => "am",
     };
     ModuleInfo::of().info(state).some()
-}
-
-fn rust_version(wd: &Path) -> ModuleOut {
-    let cargo_toml = wd.join("Cargo.toml");
-    let _ = cargo_toml.metadata().ok().filter(|f| f.is_file())?;
-
-    let rustc_version = Command::new("rustc")
-        .arg("--version")
-        .output()
-        .ok()
-        .filter(|c| c.status.success())?;
-
-    let rustc_version = String::from_utf8_lossy(&rustc_version.stdout);
-    let rustc_version = rustc_version.split_whitespace().nth(1);
-
-    rustc_version.map(|v| ModuleInfo::of().icon("🦀").text(v).color(ORANGE))
-}
-
-fn java_version(wd: &Path) -> ModuleOut {
-    let has_file = move |file: &str| -> bool {
-        let build_file = wd.join(file);
-        build_file.metadata().ok().filter(|f| f.is_file()).is_some()
-    };
-
-    for file in [
-        "build.gradle",
-        "pom.xml",
-        "build.gradle.kts",
-        "build.sbt",
-        "build.xml",
-        ".java-version",
-    ]
-    .iter()
-    {
-        if has_file(file) {
-            let java_home = env::var_os("JAVA_HOME")?;
-            let java_home = PathBuf::from(java_home);
-            let java_home = java_home.read_link().unwrap_or(java_home);
-            let java_home = java_home.file_name()?;
-            let java_home = java_home.to_string_lossy();
-            let java_home = java_home.into_owned();
-            return ModuleInfo::of()
-                .icon("☕️")
-                .info(java_home)
-                .color(CYAN)
-                .some();
-        }
-    }
-
-    None
 }
