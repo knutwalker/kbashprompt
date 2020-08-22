@@ -164,6 +164,7 @@ dependencies = [
  "git2",
  "home",
  "macsmc",
+ "num_cpus",
  "sysinfo",
 ]
 
