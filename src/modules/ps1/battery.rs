@@ -41,7 +41,7 @@ pub(super) fn info() -> ModuleOut {
                 let mins = (secs % 3600) / 60;
                 let secs = secs % 60;
                 if hours > 0 {
-                    write!(info, "{}h", hours).unwrap();
+                    write!(info, " {}h", hours).unwrap();
                 }
                 write!(info, " {:02}m {:02}s", mins, secs).unwrap();
             }
