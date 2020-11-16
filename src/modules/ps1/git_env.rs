@@ -2,6 +2,7 @@ use super::{ModuleInfo, ModuleOut};
 use colorful::Color;
 use git2::{DescribeOptions, ReferenceType, Repository};
 
+const CYAN: Color = Color::LightSeaGreen; // 37
 const VIOLET: Color = Color::SlateBlue3a; // 61
 const PURPLE: Color = Color::DeepPink4c; // 125
 
@@ -14,6 +15,9 @@ pub(super) fn try_with_each<E>(mut fun: impl FnMut(ModuleInfo) -> Result<(), E>)
     if let Ok(repo) = Repository::open_from_env() {
         try_with_each_repo_type(&repo, &mut fun)?;
         fun(branch_name(&repo))?;
+        if let Some(info) = co_authors(&repo) {
+            fun(info)?;
+        }
         if let Some(info) = repo_state(&repo) {
             fun(info)?;
         }
@@ -34,6 +38,29 @@ fn try_with_each_repo_type<E>(
         }
     }
     Ok(())
+}
+
+fn co_authors(repo: &Repository) -> ModuleOut {
+    if let Some(wd) = repo.workdir() {
+        if let Ok(navigators) = std::process::Command::new("git-drive")
+            .arg("show")
+            .current_dir(wd)
+            .output()
+        {
+            if navigators.status.success() {
+                if let Ok(navigators) = String::from_utf8(navigators.stdout) {
+                    if !navigators.trim().is_empty() {
+                        return ModuleInfo::of()
+                            .icon("🚗")
+                            .info(navigators.trim().to_string())
+                            .color(CYAN)
+                            .some();
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 fn branch_name(repo: &Repository) -> ModuleInfo {
