@@ -16,11 +16,9 @@ macsmc = "0.1.7"
 num_cpus = "1.13.1"
 
 [dependencies.time]
-version = "0.2.16"
+version = "0.3.7"
 default-features = false
-features = ["std"]
-git = "https://github.com/knutwalker/time"
-branch = "main"
+features = ["std", "local-offset"]
 
 [profile.release]
 opt-level = 3
