@@ -9,7 +9,7 @@ edition = "2018"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-colorful = "0.2.1"
+colorful = "0.2.2"
 git2 = { version = "0.15.0", default-features = false }
 libc = "0.2.137"
 macsmc = "0.1.7"
